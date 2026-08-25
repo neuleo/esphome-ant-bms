@@ -239,19 +239,6 @@ void AntBmsBle::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t ga
       break;
     }
     case ESP_GATTC_SEARCH_CMPL_EVT: {
-      // [esp32_ble_client:064]: [0] [16:AA:22:02:23:45] 0x00 Attempting BLE connection
-      // [esp32_ble_client:126]: [0] [16:AA:22:02:23:45] ESP_GATTC_OPEN_EVT
-      // [esp32_ble_client:186]: [0] [16:AA:22:02:23:45] ESP_GATTC_SEARCH_CMPL_EVT
-      // [esp32_ble_client:189]: [0] [16:AA:22:02:23:45] Service UUID: 0x1800
-      // [esp32_ble_client:191]: [0] [16:AA:22:02:23:45]  start_handle: 0x1  end_handle: 0x9
-      // [esp32_ble_client:189]: [0] [16:AA:22:02:23:45] Service UUID: 0x1801
-      // [esp32_ble_client:191]: [0] [16:AA:22:02:23:45]  start_handle: 0xa  end_handle: 0xd
-      // [esp32_ble_client:189]: [0] [16:AA:22:02:23:45] Service UUID: 0xFFE0
-      // [esp32_ble_client:191]: [0] [16:AA:22:02:23:45]  start_handle: 0xe  end_handle: 0xffff
-      // [esp32_ble_client:193]: [0] [16:AA:22:02:23:45] Connected
-      // [esp32_ble_client:069]: [0] [16:AA:22:02:23:45]  characteristic 0xFFE1, handle 0x10, properties 0x1c
-      // [esp32_ble_client:069]: [0] [16:AA:22:02:23:45]  characteristic 0xFFE2, handle 0x13, properties 0xc
-
       auto *characteristic = this->parent_->get_characteristic(ANT_BMS_SERVICE_UUID, ANT_BMS_CHARACTERISTIC_UUID);
       if (characteristic == nullptr) {
         ESP_LOGE(TAG, "[%s] No notify service found at device, not an ANT BMS..?",
@@ -266,18 +253,18 @@ void AntBmsBle::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t ga
         ESP_LOGW(TAG, "esp_ble_gattc_register_for_notify failed, status=%d", status);
       }
 
-      auto *descr = this->parent_->get_config_descriptor(characteristic->handle);
+      break;
+    }
+    case ESP_GATTC_REG_FOR_NOTIFY_EVT: {
+      this->node_state = espbt::ClientState::ESTABLISHED;
+
+      auto *descr = this->parent_->get_config_descriptor(this->characteristic_handle_);
       if (descr != nullptr) {
         uint8_t notify_en[2] = {0x01, 0x00};
         esp_ble_gattc_write_char_descr(this->parent_->get_gattc_if(), this->parent_->get_conn_id(),
                                        descr->handle, sizeof(notify_en), notify_en,
                                        ESP_GATT_WRITE_TYPE_NO_RSP, ESP_GATT_AUTH_REQ_NONE);
       }
-
-      break;
-    }
-    case ESP_GATTC_REG_FOR_NOTIFY_EVT: {
-      this->node_state = espbt::ClientState::ESTABLISHED;
 
       ESP_LOGI(TAG, "Request status frame");
       // 0x7e 0xa1 0x01 0x00 0x00 0xbe ...
