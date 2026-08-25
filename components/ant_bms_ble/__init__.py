@@ -1,0 +1,44 @@
+import esphome.codegen as cg
+from esphome.components import ble_client
+import esphome.config_validation as cv
+from esphome.const import CONF_ID, CONF_THROTTLE
+
+CODEOWNERS = ["@syssi"]
+
+AUTO_LOAD = ["binary_sensor", "button", "select", "sensor", "switch", "text_sensor"]
+MULTI_CONF = True
+
+CONF_ANT_BMS_BLE_ID = "ant_bms_ble_id"
+
+ant_bms_ble_ns = cg.esphome_ns.namespace("ant_bms_ble")
+AntBmsBle = ant_bms_ble_ns.class_(
+    "AntBmsBle", ble_client.BLEClientNode, cg.PollingComponent
+)
+
+ANT_BMS_BLE_COMPONENT_SCHEMA = cv.Schema(
+    {
+        cv.GenerateID(CONF_ANT_BMS_BLE_ID): cv.use_id(AntBmsBle),
+    }
+)
+
+CONFIG_SCHEMA = cv.All(
+    cv.require_esphome_version(2024, 12, 0),
+    cv.Schema(
+        {
+            cv.GenerateID(): cv.declare_id(AntBmsBle),
+            cv.Optional(
+                CONF_THROTTLE, default="0s"
+            ): cv.positive_time_period_milliseconds,
+        }
+    )
+    .extend(ble_client.BLE_CLIENT_SCHEMA)
+    .extend(cv.polling_component_schema("2s")),
+)
+
+
+async def to_code(config):
+    var = cg.new_Pvariable(config[CONF_ID])
+    await cg.register_component(var, config)
+    await ble_client.register_ble_node(var, config)
+
+    cg.add(var.set_throttle(config[CONF_THROTTLE]))
