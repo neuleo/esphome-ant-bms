@@ -1,6 +1,9 @@
 #include "ant_bms_ble.h"
 #include "esphome/core/log.h"
 #include "esphome/core/helpers.h"
+#if __has_include("esphome/core/alloc_helpers.h")
+#include "esphome/core/alloc_helpers.h"
+#endif
 #include "esphome/core/version.h"
 #include <array>
 
